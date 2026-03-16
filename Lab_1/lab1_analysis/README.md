@@ -7,16 +7,6 @@
 **Уровень сложности:** Medium  
 **Вариант:** 20
 
-## Структура проекта
-uefa_cl_analysis/
-├── data/ # Исходные данные
-├── scripts/ # Python скрипты
-├── output/ # Результаты визуализации
-├── requirements.txt # Зависимости Python
-├── database_dump.sql # Дамп базы данных
-└── README.md # Документация
-
-
 ## Установка и запуск
 
 ### 1. Установите PostgreSQL
