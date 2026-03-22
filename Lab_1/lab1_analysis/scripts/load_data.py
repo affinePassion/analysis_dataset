@@ -21,7 +21,7 @@ def load_data():
     engine = create_engine(connection_string)
     
     # Загрузка данных из Excel
-    file_path = "C:/Users/dali_/OneDrive/Документы/GitHub/analysis_dataset/Lab_1/lab1_analysis/dataset/UEFA Champions League 2016-2022 Data.xlsx"
+    file_path = r"C:\Users\POMAH\Documents\GitHub\analysis_dataset\Lab_1\lab1_analysis\dataset\UEFA Champions League 2016-2022 Data.xlsx"
     
     print("Загрузка данных из Excel...")
     

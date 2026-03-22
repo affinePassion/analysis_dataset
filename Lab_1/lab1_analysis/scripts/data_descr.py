@@ -1,6 +1,5 @@
 import pandas as pd
 from sqlalchemy import create_engine, text
-import matplotlib.pyplot as plt
 
 def describe_data():
 
