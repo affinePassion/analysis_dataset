@@ -2,23 +2,18 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 
 def describe_data():
-
-    # Параметры подключения
     DB_CONFIG = {
         'host': 'povt-cluster.tstu.tver.ru',
         'user': 'mpi',
         'password': '135a1',
         'port': '5432',
-        'database': 'uefa_champions_league_20'
+        'database': 'programmers_salary'
     }
-    # Создаём строку подключения для SQLAlchemy
     connection_string = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
-    
-    # Подключение к БД
     engine = create_engine(connection_string)
 
     print("-" * 60)
-    print("UEFA CHAMPIONS LEAGUE (2016-2022)")
+    print("ДАННЫЕ О ЗАРПЛАТАХ ПРОГРАММИСТОВ")
     print("-" * 60)
 
     with engine.connect() as conn:
@@ -58,7 +53,7 @@ def describe_data():
             if data_type in ['bigint', 'integer', 'numeric', 'real', 'double precision']:
                 scale = "Количественный"
             elif data_type in ['character varying', 'text', 'character']:
-                unique_count = pd.read_sql(f'SELECT COUNT(DISTINCT "{col_name.upper()}") FROM {table}', engine).iloc[0,0]
+                unique_count = pd.read_sql(f'SELECT COUNT(DISTINCT "{col_name}") FROM {table}', engine).iloc[0,0]
                 if unique_count < 10:
                     scale = "Категориальный"
                 else:
@@ -69,7 +64,6 @@ def describe_data():
                 scale = "Бинарный"
             else:
                 scale = "Не определено"
-            
             print(f"  - {col_name}: {scale}")
         
         count = pd.read_sql(f"SELECT COUNT(*) FROM {table}", engine).iloc[0,0]

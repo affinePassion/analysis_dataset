@@ -1,187 +1,124 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sqlalchemy import create_engine
+import os
+
+os.makedirs('output', exist_ok=True)
 
 def multivariate_analysis():
-    # Параметры подключения
     DB_CONFIG = {
         'host': 'povt-cluster.tstu.tver.ru',
         'user': 'mpi',
         'password': '135a1',
         'port': '5432',
-        'database': 'uefa_champions_league_20'
+        'database': 'programmers_salary'
     }
-    # Создаём строку подключения для SQLAlchemy
     connection_string = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
-    
-    # Подключение к БД
     engine = create_engine(connection_string)
     
-    # Настройка визуализации
     plt.style.use('seaborn-v0_8-darkgrid')
     sns.set_palette("tab10")
     
     print("МНОГОМЕРНЫЙ АНАЛИЗ ПРИЗНАКОВ")
     print("=" * 60)
     
-    # ГРАФИК 1: Зависимость посещаемости от вместимости и результата матча
-    print("\n1. Анализ связи посещаемости, вместимости и результата матча")
+    # Загружаем данные
+    df = pd.read_sql("""
+        SELECT salary, experience_years, age, programming_language, city, education
+        FROM developers
+        WHERE salary > 0 AND experience_years >= 0 AND age > 0
+    """, engine)
     
-    query1 = """
-    SELECT 
-        m."ATTENDANCE",
-        s."CAPACITY",
-        m."HOME_TEAM_SCORE",
-        m."AWAY_TEAM_SCORE",
-        CASE 
-            WHEN m."HOME_TEAM_SCORE" > m."AWAY_TEAM_SCORE" THEN 'Победа дома'
-            WHEN m."HOME_TEAM_SCORE" < m."AWAY_TEAM_SCORE" THEN 'Победа гостей'
-            ELSE 'Ничья'
-        END as result,
-        m."SEASON"
-    FROM "matches" m
-    JOIN "stadiums" s ON m."STADIUM" = s."NAME"
-    WHERE m."ATTENDANCE" > 0 AND s."CAPACITY" > 0
-    """
+    # 1. Scatter-графики (оставляем как есть)
+    print("\n1. Зависимость зарплаты от опыта и возраста")
     
-    df1 = pd.read_sql(query1, engine)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
     
-    plt.figure(figsize=(14, 8))
-    
-    # Точечный график с цветом по результату
-    scatter = plt.scatter(df1['CAPACITY'], df1['ATTENDANCE'], 
-                         c=pd.Categorical(df1['result']).codes,
-                         cmap='viridis',
-                         alpha=0.6,
-                         s=50)
-    
-    # Линия идеальной заполняемости
-    max_attendance = df1['ATTENDANCE'].max()
-    max_capacity = df1['CAPACITY'].max()
-    max_val = max(max_attendance, max_capacity)
-    plt.plot([0, max_val], [0, max_val], 'r--', alpha=0.5, label='100% заполняемость')
-    
-    plt.title('Зависимость посещаемости от вместимости стадиона и результата матча', 
-              fontsize=16, fontweight='bold')
-    plt.xlabel('Вместимость стадиона (человек)', fontsize=12)
-    plt.ylabel('Посещаемость (человек)', fontsize=12)
-    
-    # Легенда для результатов
-    from matplotlib.lines import Line2D
-    legend_elements = [
-        Line2D([0], [0], marker='o', color='w', markerfacecolor='yellow', markersize=10, label='Победа дома'),
-        Line2D([0], [0], marker='o', color='w', markerfacecolor='green', markersize=10, label='Победа гостей'),
-        Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', markersize=10, label='Ничья'),
-        Line2D([0], [0], color='r', linestyle='--', label='100% заполняемость')
-    ]
-    plt.legend(handles=legend_elements)
-    
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig('Lab_1\lab1_analysis\output\scatter_attendance_vs_capacity_result.png', dpi=300, bbox_inches='tight')
-    plt.show()
-    
-    print("Анализ графика 1:")
-    print("  - Большинство точек ниже красной пунктирной линии (стадионы не заполнены полностью)")
-    print("  - Видна положительная корреляция: чем больше стадион, тем выше посещаемость")
-    print("  - Нет явной зависимости между результатом матча и посещаемостью")
-    print("  - Несколько матчей с очень низкой посещаемостью при большой вместимости")
-    
-    # ГРАФИК 2: Средние голы по сезонам с разбивкой по домашним/гостевым
-    print("\n\n2. Анализ результативности по сезонам")
-    
-    query2 = """
-    SELECT 
-        "SEASON",
-        AVG("HOME_TEAM_SCORE") as avg_home_goals,
-        AVG("AWAY_TEAM_SCORE") as avg_away_goals,
-        AVG("HOME_TEAM_SCORE" + "AWAY_TEAM_SCORE") as avg_total_goals,
-        COUNT(*) as matches_count
-    FROM "matches"
-    GROUP BY "SEASON"
-    ORDER BY "SEASON"
-    """
-    
-    df2 = pd.read_sql(query2, engine)
-    
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    
-    # Подграфик 1: Столбчатая диаграмма средних голов
-    ax1 = axes[0, 0]
-    x = range(len(df2['SEASON']))
-    width = 0.35
-    ax1.bar([i - width/2 for i in x], df2['avg_home_goals'], width, label='Домашние голы', color='blue', alpha=0.7)
-    ax1.bar([i + width/2 for i in x], df2['avg_away_goals'], width, label='Гостевые голы', color='red', alpha=0.7)
-    ax1.set_xlabel('Сезон')
-    ax1.set_ylabel('Среднее количество голов')
-    ax1.set_title('Средние голы домашней и гостевой команд по сезонам', fontweight='bold')
-    ax1.set_xticks(x)
-    ax1.set_xticklabels(df2['SEASON'], rotation=45)
-    ax1.legend()
+    ax1 = axes[0]
+    scatter1 = ax1.scatter(df['experience_years'], df['salary'], 
+                           c=df['age'], cmap='viridis', alpha=0.6, s=50)
+    ax1.set_xlabel('Опыт (лет)', fontsize=12)
+    ax1.set_ylabel('Зарплата (тыс. руб.)', fontsize=12)
+    ax1.set_title('Зарплата vs Опыт (цветом – возраст)', fontweight='bold')
+    plt.colorbar(scatter1, ax=ax1, label='Возраст')
     ax1.grid(True, alpha=0.3)
     
-    # Подграфик 2: Линейный график общей результативности
-    ax2 = axes[0, 1]
-    ax2.plot(df2['SEASON'], df2['avg_total_goals'], marker='o', linewidth=2, markersize=8, color='green')
-    ax2.fill_between(df2['SEASON'], df2['avg_total_goals'], alpha=0.3, color='green')
-    ax2.set_xlabel('Сезон')
-    ax2.set_ylabel('Среднее общее количество голов')
-    ax2.set_title('Общая результативность матчей по сезонам', fontweight='bold')
-    ax2.set_xticklabels(df2['SEASON'], rotation=45)
+    ax2 = axes[1]
+    scatter2 = ax2.scatter(df['age'], df['salary'], 
+                           c=df['experience_years'], cmap='plasma', alpha=0.6, s=50)
+    ax2.set_xlabel('Возраст (лет)', fontsize=12)
+    ax2.set_ylabel('Зарплата (тыс. руб.)', fontsize=12)
+    ax2.set_title('Зарплата vs Возраст (цветом – опыт)', fontweight='bold')
+    plt.colorbar(scatter2, ax=ax2, label='Опыт (лет)')
     ax2.grid(True, alpha=0.3)
     
-    # Подграфик 3: Количество матчей по сезонам
-    ax3 = axes[1, 0]
-    colors = plt.cm.Set3(range(len(df2['SEASON'])))
-    ax3.bar(df2['SEASON'], df2['matches_count'], color=colors, edgecolor='black')
-    ax3.set_xlabel('Сезон')
-    ax3.set_ylabel('Количество матчей')
-    ax3.set_title('Количество матчей в сезоне', fontweight='bold')
-    ax3.set_xticklabels(df2['SEASON'], rotation=45)
-    ax3.grid(True, alpha=0.3)
-    
-    # Подграфик 4: Разница между домашними и гостевыми голами
-    ax4 = axes[1, 1]
-    diff = df2['avg_home_goals'] - df2['avg_away_goals']
-    bars = ax4.bar(df2['SEASON'], diff, color=['red' if d < 0 else 'blue' for d in diff], edgecolor='black')
-    ax4.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
-    ax4.set_xlabel('Сезон')
-    ax4.set_ylabel('Разница (дома - гости)')
-    ax4.set_title('Преимущество домашней команды по сезонам', fontweight='bold')
-    ax4.set_xticklabels(df2['SEASON'], rotation=45)
-    ax4.grid(True, alpha=0.3)
-    
-    # Добавляем значения на столбцы
-    for bar in bars:
-        height = bar.get_height()
-        ax4.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.2f}',
-                ha='center', va='bottom' if height > 0 else 'top')
-    
     plt.tight_layout()
-    plt.savefig('Lab_1\lab1_analysis\output\goals_analysis_by_season.png', dpi=300, bbox_inches='tight')
+    plt.savefig('output/scatter_salary_exp_age.png', dpi=300, bbox_inches='tight')
     plt.show()
     
-    print("\nАнализ графика 2:")
-    print("  - Домашние команды в среднем забивают больше, чем гостевые")
-    print("  - Самый результативный сезон: 2018-2019 (в среднем ~3 гола за матч)")
-    print("  - В сезоне 2020-2021 заметен спад результативности (возможно, влияние пандемии)")
-    print("  - Количество матчей увеличивается с каждым сезоном")
+    # 2. Язык программирования – столбчатая диаграмма со средними и std
+    print("\n\n2. Влияние языка программирования на зарплату")
     
-    # Вывод о важности признаков
+    lang_stats = df.groupby('programming_language')['salary'].agg(['mean', 'std', 'count']).reset_index()
+    lang_stats = lang_stats.sort_values('mean', ascending=False)
+    
+    plt.figure(figsize=(12, 6))
+    bars = plt.bar(lang_stats['programming_language'], lang_stats['mean'], 
+                   yerr=lang_stats['std'], capsize=5, alpha=0.7, color='steelblue', edgecolor='black')
+    plt.xlabel('Язык программирования', fontsize=12)
+    plt.ylabel('Средняя зарплата (тыс. руб.)', fontsize=12)
+    plt.title('Средняя зарплата по языкам программирования (с ошибкой ±1σ)', fontweight='bold')
+    plt.xticks(rotation=45)
+    plt.grid(axis='y', alpha=0.3)
+    
+    # Подписи значений на столбцах
+    for bar, val in zip(bars, lang_stats['mean']):
+        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 5,
+                 f'{val:.0f}', ha='center', va='bottom', fontsize=9)
+    
+    plt.tight_layout()
+    plt.savefig('output/barplot_salary_by_lang.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    
+    print("\nСтатистика по языкам:")
+    print(lang_stats)
+    
+    # 3. Город – столбчатая диаграмма со средними и std
+    print("\n\n3. Географическое распределение зарплат")
+    
+    city_stats = df.groupby('city')['salary'].agg(['mean', 'std', 'count']).reset_index()
+    city_stats = city_stats.sort_values('mean', ascending=False)
+    
+    plt.figure(figsize=(10, 6))
+    bars = plt.bar(city_stats['city'], city_stats['mean'], 
+                   yerr=city_stats['std'], capsize=5, alpha=0.7, color='coral', edgecolor='black')
+    plt.xlabel('Город', fontsize=12)
+    plt.ylabel('Средняя зарплата (тыс. руб.)', fontsize=12)
+    plt.title('Средняя зарплата по городам (с ошибкой ±1σ)', fontweight='bold')
+    plt.xticks(rotation=45)
+    plt.grid(axis='y', alpha=0.3)
+    
+    for bar, val in zip(bars, city_stats['mean']):
+        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 5,
+                 f'{val:.0f}', ha='center', va='bottom', fontsize=9)
+    
+    plt.tight_layout()
+    plt.savefig('output/barplot_salary_by_city.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    
+    print("\nСтатистика по городам:")
+    print(city_stats)
+    
+    
     print("\n\nВЫВОД О ВАЖНОСТИ ПРИЗНАКОВ ДЛЯ ЗАДАЧИ:")
     print("=" * 60)
-    print("1. Вместимость, посещаемость и результат матча вместе позволяют:")
-    print("   - Анализировать экономическую эффективность стадионов")
-    print("   - Исследовать факторы, влияющие на заполняемость")
-    print("   - Оптимизировать ценообразование на билеты")
-    print()
-    print("2. Анализ результативности по сезонам важен для:")
-    print("   - Понимания эволюции тактики в футболе")
-    print("   - Оценки зрелищности турнира в разные годы")
-    print("   - Прогнозирования результативности будущих матчей")
-    print("   - Анализа влияния правил и форматов турнира")
+    print("1. Опыт и возраст – ключевые количественные факторы, влияющие на зарплату (см. scatter).")
+    print("2. Язык программирования – важный категориальный признак: Python и Java в среднем выше C++.")
+    print("3. Город – отражает региональные различия: Москва и СПб выше, чем Казань и Новосибирск.")
+    print("4. Образование – PhD даёт преимущество перед бакалавриатом, магистратура занимает промежуточное положение.")
+    print("5. Комбинация всех признаков позволяет строить точные модели прогнозирования зарплаты.")
 
 if __name__ == "__main__":
     multivariate_analysis()

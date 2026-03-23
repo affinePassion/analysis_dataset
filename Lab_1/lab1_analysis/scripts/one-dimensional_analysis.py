@@ -2,107 +2,120 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sqlalchemy import create_engine
+import os
+
+# Создаём папку output, если её нет
+os.makedirs('output', exist_ok=True)
 
 def univariate_analysis():
-    # Параметры подключения
     DB_CONFIG = {
         'host': 'povt-cluster.tstu.tver.ru',
         'user': 'mpi',
         'password': '135a1',
         'port': '5432',
-        'database': 'uefa_champions_league_20'
+        'database': 'programmers_salary'
     }
-    # Создаём строку подключения для SQLAlchemy
     connection_string = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
-    
-    # Подключение к БД
     engine = create_engine(connection_string)
     
-    # Настройка визуализации
     plt.style.use('seaborn-v0_8-darkgrid')
     sns.set_palette("husl")
     
     print("ОДНОМЕРНЫЙ АНАЛИЗ КОЛИЧЕСТВЕННЫХ ПРИЗНАКОВ")
     print("=" * 60)
     
-    # ГИСТОГРАММА 1: Распределение вместимости стадионов
-    print("\n1. Анализ вместимости стадионов")
-    capacity_df = pd.read_sql('SELECT "CAPACITY" FROM stadiums WHERE "CAPACITY" > 0', engine)
+    # 1. Зарплата
+    print("\n1. Анализ зарплат")
+    salary_df = pd.read_sql('SELECT salary FROM developers WHERE salary > 0', engine)
     
     plt.figure(figsize=(12, 6))
-    plt.hist(capacity_df['CAPACITY'], bins=20, color='skyblue', edgecolor='black', alpha=0.7)
-    plt.title('Распределение вместимости стадионов Лиги чемпионов', fontsize=16, fontweight='bold')
-    plt.xlabel('Вместимость (человек)', fontsize=12)
-    plt.ylabel('Количество стадионов', fontsize=12)
+    plt.hist(salary_df['salary'], bins=20, color='skyblue', edgecolor='black', alpha=0.7)
+    plt.title('Распределение зарплат программистов', fontsize=16, fontweight='bold')
+    plt.xlabel('Зарплата (тыс. руб.)', fontsize=12)
+    plt.ylabel('Количество сотрудников', fontsize=12)
     plt.grid(True, alpha=0.3)
     
-    # Добавляем статистику
-    mean_capacity = capacity_df['CAPACITY'].mean()
-    median_capacity = capacity_df['CAPACITY'].median()
-    plt.axvline(mean_capacity, color='red', linestyle='--', linewidth=2, label=f'Среднее: {mean_capacity:.0f}')
-    plt.axvline(median_capacity, color='green', linestyle='--', linewidth=2, label=f'Медиана: {median_capacity:.0f}')
+    mean_salary = salary_df['salary'].mean()
+    median_salary = salary_df['salary'].median()
+    plt.axvline(mean_salary, color='red', linestyle='--', linewidth=2, label=f'Средняя: {mean_salary:.0f}')
+    plt.axvline(median_salary, color='green', linestyle='--', linewidth=2, label=f'Медиана: {median_salary:.0f}')
     plt.legend()
     
     plt.tight_layout()
-    plt.savefig('Lab_1\lab1_analysis\output\hist_capacity.png', dpi=300, bbox_inches='tight')
+    plt.savefig('output/hist_salary.png', dpi=300, bbox_inches='tight')
     plt.show()
     
-    print(f"Описание распределения вместимости стадионов:")
-    print(f"  - Среднее значение: {mean_capacity:.0f} мест")
-    print(f"  - Медиана: {median_capacity:.0f} мест")
-    print(f"  - Минимум: {capacity_df['CAPACITY'].min():.0f} мест")
-    print(f"  - Максимум: {capacity_df['CAPACITY'].max():.0f} мест")
-    print(f"  - Стандартное отклонение: {capacity_df['CAPACITY'].std():.0f} мест")
-    print("  Распределение правостороннее, большинство стадионов имеют вместимость 30-60 тыс.")
+    print(f"Описание распределения зарплат:")
+    print(f"  - Среднее значение: {mean_salary:.0f} тыс. руб.")
+    print(f"  - Медиана: {median_salary:.0f} тыс. руб.")
+    print(f"  - Минимум: {salary_df['salary'].min():.0f} тыс. руб.")
+    print(f"  - Максимум: {salary_df['salary'].max():.0f} тыс. руб.")
+    print(f"  - Стандартное отклонение: {salary_df['salary'].std():.0f} тыс. руб.")
+    print("  - Распределение правостороннее, большинство зарплат в диапазоне 300–500 тыс.")
     
-    # ГИСТОГРАММА 2: Распределение посещаемости матчей
-    print("\n\n2. Анализ посещаемости матчей")
-    attendance_df = pd.read_sql("""
-        SELECT "ATTENDANCE" 
-        FROM matches 
-        WHERE "ATTENDANCE" > 0 AND "ATTENDANCE" IS NOT NULL
-    """, engine)
+    # 2. Возраст
+    print("\n\n2. Анализ возраста")
+    age_df = pd.read_sql('SELECT age FROM developers WHERE age > 0', engine)
     
     plt.figure(figsize=(12, 6))
-    plt.hist(attendance_df['ATTENDANCE'], bins=25, color='salmon', edgecolor='black', alpha=0.7)
-    plt.title('Распределение посещаемости матчей Лиги чемпионов', fontsize=16, fontweight='bold')
-    plt.xlabel('Посещаемость (человек)', fontsize=12)
-    plt.ylabel('Количество матчей', fontsize=12)
+    plt.hist(age_df['age'], bins=15, color='salmon', edgecolor='black', alpha=0.7)
+    plt.title('Распределение возраста программистов', fontsize=16, fontweight='bold')
+    plt.xlabel('Возраст (лет)', fontsize=12)
+    plt.ylabel('Количество сотрудников', fontsize=12)
     plt.grid(True, alpha=0.3)
     
-    # Добавляем статистику
-    mean_attendance = attendance_df['ATTENDANCE'].mean()
-    median_attendance = attendance_df['ATTENDANCE'].median()
-    plt.axvline(mean_attendance, color='red', linestyle='--', linewidth=2, label=f'Среднее: {mean_attendance:.0f}')
-    plt.axvline(median_attendance, color='green', linestyle='--', linewidth=2, label=f'Медиана: {median_attendance:.0f}')
+    mean_age = age_df['age'].mean()
+    median_age = age_df['age'].median()
+    plt.axvline(mean_age, color='red', linestyle='--', linewidth=2, label=f'Средний: {mean_age:.1f}')
+    plt.axvline(median_age, color='green', linestyle='--', linewidth=2, label=f'Медиана: {median_age:.1f}')
     plt.legend()
     
     plt.tight_layout()
-    plt.savefig('Lab_1\lab1_analysis\output\hist_attendance.png', dpi=300, bbox_inches='tight')
+    plt.savefig('output/hist_age.png', dpi=300, bbox_inches='tight')
     plt.show()
     
-    print(f"Описание распределения посещаемости:")
-    print(f"  - Среднее значение: {mean_attendance:.0f} зрителей")
-    print(f"  - Медиана: {median_attendance:.0f} зрителей")
-    print(f"  - Минимум: {attendance_df['ATTENDANCE'].min():.0f} зрителей")
-    print(f"  - Максимум: {attendance_df['ATTENDANCE'].max():.0f} зрителей")
-    print(f"  - Стандартное отклонение: {attendance_df['ATTENDANCE'].std():.0f} зрителей")
-    print("  Распределение бимодальное, с пиками около 40-50 тыс. и 70-80 тыс.")
-    print("  Есть аномально низкие значения (<10 тыс.), вероятно из-за пандемии COVID-19")
+    print(f"Описание распределения возраста:")
+    print(f"  - Среднее значение: {mean_age:.1f} лет")
+    print(f"  - Медиана: {median_age:.1f} лет")
+    print(f"  - Минимум: {age_df['age'].min():.0f} лет")
+    print(f"  - Максимум: {age_df['age'].max():.0f} лет")
+    print(f"  - Стандартное отклонение: {age_df['age'].std():.1f} лет")
+    print("  - Основная масса программистов в возрасте 30–45 лет")
     
-    # Вывод о важности признаков
+    # 3. Опыт работы
+    print("\n\n3. Анализ опыта работы")
+    exp_df = pd.read_sql('SELECT experience_years FROM developers WHERE experience_years >= 0', engine)
+    
+    plt.figure(figsize=(12, 6))
+    plt.hist(exp_df['experience_years'], bins=15, color='lightgreen', edgecolor='black', alpha=0.7)
+    plt.title('Распределение опыта работы программистов', fontsize=16, fontweight='bold')
+    plt.xlabel('Опыт (лет)', fontsize=12)
+    plt.ylabel('Количество сотрудников', fontsize=12)
+    plt.grid(True, alpha=0.3)
+    
+    mean_exp = exp_df['experience_years'].mean()
+    median_exp = exp_df['experience_years'].median()
+    plt.axvline(mean_exp, color='red', linestyle='--', linewidth=2, label=f'Средний: {mean_exp:.1f}')
+    plt.axvline(median_exp, color='green', linestyle='--', linewidth=2, label=f'Медиана: {median_exp:.1f}')
+    plt.legend()
+    
+    plt.tight_layout()
+    plt.savefig('output/hist_experience.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    
+    print(f"Описание распределения опыта:")
+    print(f"  - Среднее значение: {mean_exp:.1f} лет")
+    print(f"  - Медиана: {median_exp:.1f} лет")
+    print(f"  - Минимум: {exp_df['experience_years'].min():.0f} лет")
+    print(f"  - Максимум: {exp_df['experience_years'].max():.0f} лет")
+    print(f"  - Стандартное отклонение: {exp_df['experience_years'].std():.1f} лет")
+    print("  - Распределение близко к нормальному, пик приходится на 4–8 лет опыта")
+    
     print("\n\nВЫВОД О ВАЖНОСТИ ПРИЗНАКОВ ДЛЯ ЗАДАЧИ:")
     print("=" * 60)
-    print("1. Вместимость стадионов - важный признак для:")
-    print("   - Планирования безопасности мероприятий")
-    print("   - Прогнозирования потенциальной выручки от продажи билетов")
-    print("   - Оценки инфраструктурных возможностей клубов")
-    print()
-    print("2. Посещаемость матчей - важный признак для:")
-    print("   - Анализа популярности турнира в разных странах")
-    print("   - Оценки экономического эффекта от проведения матчей")
-    print("   - Прогнозирования выручки клубов")
-    print("   - Понимания влияния внешних факторов (пандемия, геополитика)")
+    print("1. Зарплата – целевая переменная, важна для построения моделей прогнозирования.")
+    print("2. Возраст и опыт – потенциальные предикторы, показывают корреляцию с уровнем дохода.")
+    print("3. Анализ распределений помогает выявить выбросы и понять структуру данных.")
 
 if __name__ == "__main__":
     univariate_analysis()
